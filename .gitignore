@@ -1,0 +1,48 @@
+# =========================
+# Power BI / Data Projects
+# =========================
+
+# Raw data (never commit)
+01_SourceData/
+*.csv
+*.xlsx
+*.xls
+
+# Power BI cache / temp
+*.tmp
+*.log
+*.bak
+
+# PBIX temp/cache files
+*.pbix.autosave
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Python (if used for prep)
+__pycache__/
+*.pyc
+
+# Excel temp files
+~$*.xlsx
+
+# Environment / local config
+.env
+*.env
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS generated
+desktop.ini
+
+# Large exports / backups
+*.zip
+*.rar
+*.7z
+
+# Documentation temp
+*.pptx.tmp
+*.docx.tmp
