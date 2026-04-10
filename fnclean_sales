@@ -1,0 +1,81 @@
+(file as binary) as table =>
+let
+    // --- Step 1: Read file as text
+    Source = Text.FromBinary(file, TextEncoding.Utf8),
+
+    // --- Step 2: Split into lines
+    Lines = Lines.FromText(Source),
+
+    // --- Step 3: Remove empty lines
+    NonEmptyLines = List.Select(Lines, each Text.Trim(_) <> ""),
+
+    // --- Step 4: Remove junk/report lines
+    CleanLines = List.Select(
+        NonEmptyLines,
+        each not Text.StartsWith(_, "Report Generated")
+             and not Text.StartsWith(_, "Sales Export")
+    ),
+
+    // --- Step 5: Standardize header lines
+    StandardHeader = "OrderID,CustomerID,ProductID,OrderDate,Quantity,UnitPrice,Discount,Tax,PaymentMethod,Location,LeadTime,OrderStatus",
+    FixedHeaders = List.Transform(
+        CleanLines,
+        each if Text.Contains(_, "Order ID") 
+             or Text.Contains(_, "SalesOrderID") 
+             or Text.Contains(_, "Unit Price") 
+             or Text.Contains(_, "Price")
+             or Text.Contains(_, "ProdID") then StandardHeader else _
+    ),
+
+    // --- Step 6: Keep only data lines (header + rows)
+    DataLines = List.Select(
+        FixedHeaders,
+        each Text.Contains(_, "OrderID") or Text.Contains(_, "ORD-")
+    ),
+
+    // --- Step 7: Recombine into CSV
+    RebuiltCSV = Text.Combine(DataLines, "#(lf)"),
+    CsvTable = Csv.Document(RebuiltCSV, [Delimiter=",", Encoding=65001]),
+
+    // --- Step 8: Promote headers
+    PromotedHeaders = Table.PromoteHeaders(CsvTable, [PromoteAllScalars=true]),
+
+    // --- Step 9: Rename all column variants to standard names
+    RenamedColumns = Table.RenameColumns(
+        PromotedHeaders,
+        {
+            {"Unit Price", "UnitPrice"},
+            {"Price", "UnitPrice"},
+            {"Tax Amount", "Tax"},
+            {"ProdID", "ProductID"}
+        },
+        MissingField.Ignore
+    ),
+
+    // --- Step 10: Clean numeric columns safely
+    CleanNumeric = Table.TransformColumns(
+        RenamedColumns,
+        {
+            {"UnitPrice", each try Number.From(Text.Select(Text.From(_), {"0".."9",".","-"})) otherwise null, type number},
+            {"Discount", each try Number.From(Text.Select(Text.From(_), {"0".."9",".","-"})) otherwise null, type number},
+            {"Tax", each try Number.From(Text.Select(Text.From(_), {"0".."9",".","-"})) otherwise null, type number}
+        }
+    ),
+
+    // --- Step 11: Convert other types
+    FinalTable = Table.TransformColumnTypes(
+        CleanNumeric,
+        {
+            {"OrderID", type text},
+            {"CustomerID", type text},
+            {"ProductID", type text},
+            {"OrderDate", type date},
+            {"Quantity", Int64.Type},
+            {"PaymentMethod", type text},
+            {"Location", type text},
+            {"LeadTime", Int64.Type},
+            {"OrderStatus", type text}
+        }
+    )
+in
+    FinalTable
