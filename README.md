@@ -2,7 +2,7 @@
 
 Power BI project built for a retail bakery franchise using a legacy POS system that exported messy CSV files. The goal was to replace manual cleanup with a repeatable Power Query pipeline and a financial dashboard that could be refreshed without rework.
 
-![Dashboard Preview](screenshots/dashboard-main.png)
+
 
 ## Project background
 
